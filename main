@@ -1,0 +1,1463 @@
+#include <iostream>
+#include <Windows.h>
+#include <fstream>
+#include <string>
+#include <time.h>
+#include <cmath>
+
+//прототипы функций для проверки на ввод
+//определения после main
+int Enter();
+std::string EnterOneAnswer(int);
+std::string EnterPoliAnswer(int);
+std::string PoliAnswer(int);
+
+//шифрование данных в файле
+int Cesar = 3;
+void encryption(std::fstream& file, std::string a)
+{
+	for (int i = 0; i < a.length(); i++)
+	{
+		file << char(a[i] + Cesar);
+	}
+}
+bool decryption(std::fstream& file, std::string& b)
+{
+	if (getline(file, b))
+	{
+		for (int i = 0; i < b.length(); i++)
+		{
+			b[i] = char(b[i] - Cesar);
+		}
+		return true;
+	}
+	else
+		return false;
+}
+
+//прототипы функций для прохождения теста пользователем
+//определения после main
+void StartTest();
+double Convert(std::string);
+void CheckResault(std::string);
+
+//функции для пароля
+void Password_Enter()
+{
+	std::cout << "Введите пароль:\n";
+	std::string password;
+	do
+	{
+		getline(std::cin, password);
+		if (password == "")
+			std::cout << "\nНекорректный ввод, введите снова: ";
+	} while (password == "");
+	std::fstream PasswordFile;
+	PasswordFile.open("PasswordFile.txt", std::ios::out);
+	encryption(PasswordFile, password);
+	PasswordFile << '\n';
+	PasswordFile.close();
+}
+bool Enter_By_Administrator()
+{
+	std::string password;
+	std::fstream PasswordFile;
+	PasswordFile.open("PasswordFile.txt", std::ios::in);
+	decryption(PasswordFile, password);
+	PasswordFile.close();
+
+	for (int i = 0; i < 3; i++)
+	{
+		if (i == 0)
+			std::cout << "Введите пароль для входа в качестве администратора:\n";
+		if (i == 1)
+			std::cout << "\nНеверный пароль.\nУ вас осталось 2 попытки ввода для входа в качестве администратора:\n";
+		if (i == 2)
+			std::cout << "\nНеверный пароль.\nОсторожно, это последняя попытка входа в качестве администратора:\n";
+		std::string user_password;
+		getline(std::cin, user_password);
+		if (password == user_password)
+		{
+			std::cout << "\nВы успешно вошли в систему в качестве администратора.\n";
+			return true;
+		}
+		if (i == 2)
+			return false;
+	}
+}
+
+//функции для корректировки теста администратором
+void Add_Task()
+{
+	std::fstream file;
+	file.open("Test.txt", std::ios::app);
+	std::cout << "\nВведите тип вопроса: \n";
+	std::cout << "1 - Открытый с 1 правильным вариантом ответа\n";
+	std::cout << "2 - Открытый с несколькими правильными вариантами ответа\n";
+	std::cout << "3 - Закрытый вопрос\n\n";
+	std::cout << "Тип №";
+	std::string s;
+	do
+	{
+		getline(std::cin, s);
+		if (s != "1" && s != "2" && s != "3" && s != "")
+			std::cout << "Некорректный ввод, введите снова: ";
+	} while (s != "1" && s != "2" && s != "3");
+	encryption(file, s);
+	file << '\n';
+	int var = s[0] - 48;
+	std::cout << "\nВведите вопрос: ";
+	do
+	{
+		getline(std::cin, s);
+	} while (s == "");
+	encryption(file, s);
+	file << '\n';
+	int num;
+	if (var == 1 || var == 2)
+	{
+		std::cout << "\nВведите количество вариантов ответа: ";
+		do
+		{
+			num = Enter();
+			if (num <= 0)
+			{
+				std::cout << "Некорректный ввод, введите снова: ";
+			}
+		} while (num <= 0);
+		std::string s;
+		for (int i = 0; i < num; i++)
+		{
+			std::cout << "\nВведите " << i + 1 << "-й вариант ответа: ";
+			do
+			{
+				getline(std::cin, s);
+			} while (s == "");
+			if (i != num)
+				encryption(file, s);
+			if (i != num - 1)
+				encryption(file, "|");
+		}
+	}
+	file << '\n';
+	if (var == 1)
+	{
+		std::cout << "\nВведите номер правильного ответа: ";
+		s = EnterOneAnswer(num);
+		encryption(file, s);
+		file << '\n';
+	}
+	else if (var == 2)
+	{
+		std::cout << "\nВведите номера правильных ответов: ";
+		s = EnterPoliAnswer(num + 1);
+		for (int i = 0; i < s.length(); i++)
+		{
+			if (s[i] == ' ')
+				s[i] = '|';
+		}
+		encryption(file, s);
+		file << '\n';
+	}
+	else
+	{
+		std::cout << "\nВведите правильный ответ: ";
+		do
+		{
+			getline(std::cin, s);
+		} while (s == "");
+		encryption(file, s);
+		file << '\n';
+	}
+	std::cout << "\nВведите сложность вопроса(от 1 до 3): ";
+	do
+	{
+		getline(std::cin, s);
+		if (s != "1" && s != "2" && s != "3" && s != "")
+			std::cout << "Некорректный ввод, введите снова: ";
+	} while (s != "1" && s != "2" && s != "3");
+	encryption(file, s);
+	file << '\n';
+	file.close();
+}
+void Show_Test()
+{
+	std::fstream file;
+	std::string s;
+	int i = 0;
+	file.open("Test.txt", std::ios::in);
+	while (decryption(file, s))
+	{
+		if (i % 5 == 1)
+		{
+			std::cout << "\nВопрос " << i / 5 + 1 << ": " << s;
+		}
+		if (i % 5 == 2)
+		{
+			if (s != "")
+				std::cout << "\nВарианты ответа: " << s;
+			else
+				std::cout << "\nВарианты ответа: закрытый вопрос" << s;
+		}
+		if (i % 5 == 3)
+		{
+			for (int k = 0; k < s.length(); k++)
+				if (s[k] == '|')
+					s[k] = ' ';
+			std::cout << "\nПравильный ответ: " << s;
+		}
+		if (i % 5 == 4)
+		{
+			std::cout << "\nСложность вопроса: " << s << " баллов\n";
+		}
+		i++;
+	}
+	if (i == 0)
+		std::cout << "\nТест не содержит вопросов\n";
+	file.close();
+}
+void Show_Statistic()
+{
+	std::fstream file;
+	std::string s;
+	int i = 0;
+	file.open("Statistic.txt", std::ios::in);
+	while (decryption(file, s))
+	{
+		if (i % 4 == 0)
+		{
+			std::cout << "\nИмя пользователя: " << s;
+		}
+		if (i % 4 == 1)
+		{
+			std::string mark1, mark2;
+			int pos = s.find('|');
+			for (int k = 0; k < pos; k++)
+			{
+				mark1 += s[k];
+			}
+			for (int k = pos + 1; k < s.length(); k++)
+			{
+				mark2 += s[k];
+			}
+			std::cout << "\nПравильность выполнения теста: " << mark1 << " из " << mark2;
+		}
+		if (i % 4 == 2)
+		{
+			std::cout << "\nУспешность выполнения теста: " << s << '%';
+		}
+		if (i % 4 == 3)
+		{
+			std::cout << "\nВремя выполнения теста: " << s << " секунд\n";
+		}
+		i++;
+	}
+	if (i == 0)
+		std::cout << "\nСтатистика не содержит данных пользователей\n";
+	file.close();
+}
+void Delete_Task()
+{
+	std::fstream file, file2;
+	file.open("Test.txt", std::ios::in);
+	file2.open("ExtraStatistic.txt", std::ios::out);
+	std::cout << "Введите номер вопроса, который Вы хотите удалить: ";
+	int num, i = 0;
+	int kost = 0;
+	std::string s;
+	do
+	{
+		num = Enter();
+		if (num <= 0)
+		{
+			std::cout << "Некорректный ввод, введите снова: ";
+		}
+	} while (num <= 0);
+	while (decryption(file, s))
+	{
+		if (i / 5 != num - 1)
+		{
+			encryption(file2, s);
+			kost++;
+			file2 << '\n';
+		}
+		i++;
+	}
+	if (kost == i)
+	{
+		std::cout << "\nВопрос не был найден\n";
+	}
+	file.close();
+	file2.close();
+	file.open("Test.txt", std::ios::out);
+	file2.open("ExtraStatistic.txt", std::ios::in);
+	while (decryption(file2, s))
+	{
+		encryption(file, s);
+		file << '\n';
+	}
+}
+void Delete_Statistic()
+{
+	std::fstream file, file2;
+	std::string s, name;
+	int i = 0, del = -5;
+	file.open("Statistic.txt", std::ios::in);
+	file2.open("ExtraStatistic.txt", std::ios::out);
+	std::cout << "\nВведите имя пользователя, которого Вы хотите удалить из рейтинга: ";
+	do
+	{
+		getline(std::cin, name);
+	} while (name == "");
+	while (decryption(file, s))
+	{
+		if (s == name)
+		{
+			del = i;
+		}
+		if (del != i && del != i - 1 && del != i - 2 && del != i - 3)
+		{
+			encryption(file2, s);
+			file2 << '\n';
+		}
+		i++;
+	}
+	if (del)
+		std::cout << "\nПользователь был удалён\n";
+	else
+		std::cout << "\nПользователь не был найден\n";
+	file.close();
+	file2.close();
+	file.open("Statistic.txt", std::ios::out);
+	file2.open("ExtraStatistic.txt", std::ios::in);
+	while (decryption(file2, s))
+	{
+		encryption(file, s);
+		file << '\n';
+	}
+	file.close();
+	file2.close();
+}
+void Clear_Task()
+{
+	std::fstream file;
+	file.open("Test.txt", std::ios::out);
+	file.close();
+}
+void Clear_Statistic()
+{
+	std::fstream file;
+	file.open("Statistic.txt", std::ios::out);
+	file.close();
+}
+void Change_Task()
+{
+	std::fstream file1, file2;
+	std::string buf;
+	int count = 0;
+	file1.open("Test.txt", std::ios::in);
+	while (getline(file1, buf))
+	{
+		count++;
+	}
+	count /= 5;
+	file1.close();
+	if (count != 0)
+	{
+		std::cout << "Введите номер вопроса для изменения: ";
+		int k;
+		do
+		{
+			k = Enter();
+			if (k <= 0 || k > count)
+			{
+				std::cout << "Некорректный ввод, введите снова: ";
+			}
+		} while (k <= 0 || k > count);
+		file1.open("Test.txt", std::ios::in);
+		file2.open("ExtraStatistic.txt", std::ios::out);
+		int counter = 0;
+		for (int i = 1; i < k; i++)
+		{
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+		}
+		decryption(file1, buf);
+		int type = buf[0] - 48;
+		encryption(file2, buf);
+		file2 << '\n';
+		std::cout << "Что вы хотите изменить?\n";
+		std::cout << "1 - чтобы изменить текст вопроса\n";
+		int choice;
+		if (type != 3)
+		{
+			std::cout << "2 - чтобы изменить варианты ответа\n";
+			std::cout << "3 - чтобы изменить правильный ответ\n";
+			std::cout << "4 - чтобы изменить сложность вопроса\n";
+			std::cout << "\nПункт: ";
+			do
+			{
+				choice = Enter();
+				if (choice < 1 || choice > 4)
+				{
+					std::cout << "Некорректный ввод, введите снова: ";
+				}
+			} while (choice < 1 || choice > 4);
+		}
+		else if (type == 3)
+		{
+			std::cout << "2 - чтобы изменить правильный ответ\n";
+			std::cout << "3 - чтобы изменить сложность вопроса\n";
+			std::cout << "\nПункт: ";
+			do
+			{
+				choice = Enter();
+				if (choice < 1 || choice > 3)
+				{
+					std::cout << "Некорректный ввод, введите снова: ";
+				}
+			} while (choice < 1 || choice > 3);
+			if (choice != 1)
+				choice += 3;
+		}
+		if (choice == 1)
+		{
+			decryption(file1, buf);
+			std::string new_text;
+			std::cout << "\nВведите новый текст: ";
+			do
+			{
+				getline(std::cin, new_text);
+			} while (new_text == "");
+			encryption(file2, new_text);
+			file2 << '\n';
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+		}
+		else if (choice == 2)
+		{
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+
+			decryption(file1, buf);
+			int kol = 1;
+			for (int i = 0; i < buf.length(); i++)
+			{
+				if (buf[i] == '|')
+					kol++;
+			}
+			std::string new_text, s;
+			new_text.clear();
+			for (int i = 0; i < kol; i++)
+			{
+				std::cout << "Введите " << i + 1 << "-й вариант ответа: ";
+				do
+				{
+					getline(std::cin, s);
+				} while (s == "");
+				if (i != kol - 1)
+					new_text += s + "|";
+				else
+					new_text += s;
+			}
+			encryption(file2, new_text);
+			file2 << '\n';
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+		}
+		else if (choice == 3)
+		{
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+			int N = 1;
+			for (int j = 0; j < buf.length(); j++)
+			{
+				if (buf[j] == '|')
+					N++;
+			}
+			if (type == 1)
+			{
+				std::cout << "\nВыберите правильный ответ: ";
+				int n = 1;
+				std::cout << '\n';
+				std::cout << n << '.';
+				for (int i = 0; i < buf.length(); i++)
+				{
+					if (buf[i] == '|')
+					{
+						n++;
+						std::cout << '\n';
+						std::cout << n << '.';
+						continue;
+					}
+					std::cout << buf[i];
+
+				}
+				std::cout << '\n';
+				decryption(file1, buf);
+				do
+				{
+					n = Enter();
+					if (n < 1 || n > N)
+					{
+						std::cout << "Некорректный ввод, введите снова: ";
+					}
+				} while (n < 1 || n > N);
+				buf.clear();
+				while (n)
+				{
+					char c = (n % 10) + 48;
+					buf = c + buf;
+					n /= 10;
+				}
+				encryption(file2, buf);
+				file2 << '\n';
+			}
+			if (type == 2)
+			{
+				std::cout << "\nВыберите правильные ответы: ";
+				int n = 1;
+				std::cout << '\n';
+				std::cout << n << '.';
+				for (int i = 0; i < buf.length(); i++)
+				{
+					if (buf[i] == '|')
+					{
+
+						n++;
+						std::cout << '\n';
+						std::cout << n << '.';
+						continue;
+					}
+					std::cout << buf[i];
+
+				}
+				std::cout << '\n';
+				std::string new_text;
+				new_text = EnterPoliAnswer(n);
+				for (int i = 0; i < new_text.length(); i++)
+				{
+					if (new_text[i] == ' ')
+						new_text[i] = '|';
+				}
+				encryption(file2, new_text);
+				file2 << '\n';
+				decryption(file1, buf);
+			}
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+		}
+		else if (choice == 4)
+		{
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+			decryption(file1, buf);
+			std::cout << "\nВыберите новую сложность: ";
+			std::string hard;
+			do
+			{
+				getline(std::cin, hard);
+				if (hard != "1" && hard != "2" && hard != "3")
+					std::cout << "\nНекорректный ввод, введите снова: ";
+			} while (hard != "1" && hard != "2" && hard != "3" && hard != "");
+			encryption(file2, hard);
+			file2 << '\n';
+		}
+		else if (choice == 5)
+		{
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+			decryption(file1, buf);
+			std::cout << "\nВыберите новый правильный ответ: ";
+			std::string ans;
+			do
+			{
+				getline(std::cin, ans);
+			} while (ans == "");
+			encryption(file2, ans);
+			file2 << '\n';
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+		}
+		else if (choice == 6)
+		{
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+			decryption(file1, buf);
+			encryption(file2, buf);
+			file2 << '\n';
+			decryption(file1, buf);
+			std::cout << "\nВыберите новую сложность: ";
+			std::string hard;
+			do
+			{
+				getline(std::cin, hard);
+				if (hard != "1" && hard != "2" && hard != "3")
+					std::cout << "\nНекорректный ввод, введите снова: ";
+			} while (hard != "1" && hard != "2" && hard != "3" && hard != "");
+			encryption(file2, hard);
+			file2 << '\n';
+		}
+		while (decryption(file1, buf))
+		{
+			encryption(file2, buf);
+			file2 << '\n';
+		}
+		file1.close();
+		file2.close();
+		file1.open("Test.txt", std::ios::out);
+		file2.open("ExtraStatistic.txt", std::ios::in);
+		while (decryption(file2, buf))
+		{
+			encryption(file1, buf);
+			file1 << '\n';
+		}
+		file1.close();
+		file2.close();
+	}
+	else
+		std::cout << "\nТест не содержит вопросов\n";
+}
+
+//меню
+void Menu()
+{
+	std::cout << "\nВыберите функцию:\n1. Добавление вопроса в тест\n2. Удаление вопроса из теста\n3. Просмотр статистики\n4. Просмотр вопросов и ответов теста\n5. Изменение теста\n6. Удалить пользователя из рейтинга\n7. Очищение теста\n8. Очищение статистики\n9. Закончить работу администратора\n\nФункция №";
+	std::string var;
+	int retry;
+	do
+	{
+		retry = 0;
+		getline(std::cin, var);
+		if (var == "")
+		{
+			retry = 1;
+			continue;
+		}
+		if (var != "1" && var != "2" && var != "3" && var != "4" && var != "5" && var != "6" && var != "7" && var != "8" && var != "9")
+		{
+			std::cout << "Некорректный ввод, введите снова: ";
+			retry = 1;
+		}
+	} while (retry);
+	if (var == "1")
+	{
+		Add_Task();
+		Menu();
+	}
+	else if (var == "2")
+	{
+		Delete_Task();
+		Menu();
+	}
+	else if (var == "3")
+	{
+		Show_Statistic();
+		Menu();
+	}
+	else if (var == "4")
+	{
+		Show_Test();
+		Menu();
+	}
+	else if (var == "5")
+	{
+		Change_Task();
+		Menu();
+	}
+	else if (var == "6")
+	{
+		Delete_Statistic();
+		Menu();
+	}
+	else if (var == "7")
+	{
+		Clear_Task();
+		Menu();
+	}
+	else if (var == "8")
+	{
+		Clear_Statistic();
+		Menu();
+	}
+}
+
+int main()
+{
+	SetConsoleCP(1251);
+	SetConsoleOutputCP(1251);
+	std::cout << "Тестовая система\n";
+	std::string var;
+	do
+	{
+		var.clear();
+		std::cout << "\nВыберите пункт:\n1. Войти как администратор\n2. Войти как пользователь\n3. Закончить работу с системой\n\nФункция №";
+		int retry;
+		do
+		{
+			retry = 0;
+			getline(std::cin, var);
+			if (var == "")
+			{
+				retry = 1;
+				continue;
+			}
+			if (var != "1" && var != "2" && var != "3" && var != "1e20")
+			{
+				std::cout << "Некорректный ввод, введите снова: ";
+				retry = 1;
+			}
+		} while (retry);
+		if (var == "1")
+		{
+			if (Enter_By_Administrator())
+			{
+				Menu();
+			}
+			else
+			{
+				std::cout << "\nВам отказано в доступе в качестве администратора.\n";
+			}
+		}
+		else if (var == "2")
+		{
+			StartTest();
+		}
+		else if (var == "1e20")
+		{
+			Password_Enter();
+		}
+	} while (var != "3");
+	std::cout << "\nПрограмма завершена.";
+	return 0;
+}
+
+//функции для прохождения теста
+void StartTest()
+{
+	std::cout << "Введите ваше имя: ";
+	std::string name;
+	do
+	{
+		getline(std::cin, name);
+	} while (name == "");
+	std::fstream file, file2;
+	file.open("Test.txt", std::ios::in);
+	int i = 0, type, mark = 0, maxmark = 0;
+	std::string s;
+	clock_t start = clock();
+	int number;
+	while (decryption(file, s))
+	{
+		if (i % 5 == 0)
+		{
+			if (s == "1")
+				type = 1;
+			else if (s == "2")
+				type = 2;
+			else
+				type = 3;
+		}
+		if (type == 1)
+		{
+			
+			if (i % 5 == 1)
+			{
+				std::cout << "\nВопрос №" << i / 5 + 1 << ": " << s << '\n';
+			}
+			if (i % 5 == 2)
+			{
+				number = 1;
+				std::cout << '\n' << number++ << ": ";
+				for (int k = 0; k < s.length(); k++)
+					if (s[k] == '|')
+					{
+						std::cout << '\n' << number++ << ": ";
+					}
+					else
+					{
+						std::cout << s[k];
+					}
+			}
+			if (i % 5 == 3)
+			{
+				std::cout << "\n\nОтвет: \n";
+				std::string ans = PoliAnswer(number);
+				i++;
+				if (ans == s)
+				{
+					decryption(file, s);
+					std::cout << "Верный ответ\n";
+					if (s == "1")
+					{
+						mark += 1;
+						maxmark += 1;
+					}
+					else if (s == "2")
+					{
+						mark += 2;
+						maxmark += 2;
+					}
+					else
+					{
+						mark += 3;
+						maxmark += 3;
+					}
+				}
+				else
+				{
+					decryption(file, s);
+					std::cout << "Неверный ответ\n";
+					if (s == "1")
+					{
+						maxmark += 1;
+					}
+					else if (s == "2")
+					{
+						maxmark += 2;
+					}
+					else
+					{
+						maxmark += 3;
+					}
+				}
+			}
+		}
+		else if (type == 2)
+		{
+			if (i % 5 == 1)
+			{
+				std::cout << "\nВопрос №" << i / 5 + 1 << ": " << s << '\n';
+			}
+			if (i % 5 == 2)
+			{
+				int number = 1;
+				std::cout << '\n' << number++ << ": ";
+				for (int k = 0; k < s.length(); k++)
+					if (s[k] == '|')
+					{
+						std::cout << '\n' << number++ << ": ";
+					}
+					else
+					{
+						std::cout << s[k];
+					}
+			}
+			if (i % 5 == 3)
+			{
+				std::cout << "\n\nОтвет: \n";;
+				std::string ans = PoliAnswer(number);
+				
+				i++;
+				if (ans == s)
+				{
+					decryption(file, s);
+					std::cout << "Верный ответ\n";
+					if (s == "1")
+					{
+						mark += 1;
+						maxmark += 1;
+					}
+					else if (s == "2")
+					{
+						mark += 2;
+						maxmark += 2;
+					}
+					else
+					{
+						mark += 3;
+						maxmark += 3;
+					}
+				}
+				else
+				{
+					decryption(file, s);
+					std::cout << "Неверный ответ\n";
+					if (s == "1")
+					{
+						maxmark += 1;
+					}
+					else if (s == "2")
+					{
+						maxmark += 2;
+					}
+					else
+					{
+						maxmark += 3;
+					}
+				}
+			}
+			
+		}
+		else
+		{
+			if (i % 5 == 1)
+			{
+				std::cout << "\nВопрос №" << i / 5 + 1 << ": " << s << '\n';
+			}
+			if (i % 5 == 3)
+			{
+				std::cout << "\nОтвет: \n";
+				std::string ans;
+				do
+				{
+					getline(std::cin, ans);
+				} while (ans == "");
+				i++;
+				if (ans == s)
+				{
+					decryption(file, s);
+					std::cout << "Верный ответ\n";
+					if (s == "1")
+					{
+						mark += 1;
+						maxmark += 1;
+					}
+					else if (s == "2")
+					{
+						mark += 2;
+						maxmark += 2;
+					}
+					else
+					{
+						mark += 3;
+						maxmark += 3;
+					}
+				}
+				else
+				{
+					decryption(file, s);
+					std::cout << "Неверный ответ\n";
+					if (s == "1")
+					{
+						maxmark += 1;
+					}
+					else if (s == "2")
+					{
+						maxmark += 2;
+					}
+					else
+					{
+						maxmark += 3;
+					}
+				}
+			}
+		}
+		i++;
+	}
+	if (i != 0)
+	{
+		clock_t end = clock();
+		std::cout << "\nВаш набранный балл: " << mark << " из " << maxmark;
+		double NewProcent = (mark * 1. / maxmark) * 100;
+		std::cout << "\nПроцент правильно выполненных заданий соотвественно сложности: " << NewProcent << "%";
+		std::cout << "\nВремя выполнения теста: " << (double)(end - start) / CLOCKS_PER_SEC << " секунд\n";
+		file.close();
+		file.open("Statistic.txt", std::ios::in);
+		i = 0;
+		bool q = false;
+		int kost = -1;
+		while (decryption(file, s))
+		{
+			if (i % 4 == 0 && s == name)
+			{
+				q = true;
+				file.close();
+				break;
+			}
+			i++;
+		}
+		file.close();
+		if (q)
+		{
+			file.open("Statistic.txt", std::ios::in);
+			file2.open("ExtraStatistic.txt", std::ios::out);
+			int i = 0, kost = -1;
+			while (decryption(file, s))
+			{
+				if (s == name)
+				{
+					std::string s1, s2, s3;
+					decryption(file, s1);
+					decryption(file, s2);
+					decryption(file, s3);
+					kost = i + 1;
+					if (Convert(s2) < NewProcent)
+					{
+						encryption(file2, s);
+						file2 << '\n';
+						std::string Smark, Smaxmark, SNewProcentInt, STime;
+						while (mark)
+						{
+							char c = mark % 10 + 48;
+							Smark = c + Smark;
+							mark /= 10;
+						}
+						while (maxmark)
+						{
+							char c = maxmark % 10 + 48;
+							Smaxmark = c + Smaxmark;
+							maxmark /= 10;
+						}
+						if (Smark == "")
+							Smark = "0";
+						std::string buf = Smark + "|" + Smaxmark;
+						encryption(file2, buf);
+						file2 << '\n';
+						int NewProcentInt = NewProcent * 1000, Time = ((end - start) / (CLOCKS_PER_SEC * 1.)) * 1000;
+						int j = 0;
+						while (NewProcentInt)
+						{
+							char c = NewProcentInt % 10 + 48;
+							SNewProcentInt = c + SNewProcentInt;
+							NewProcentInt /= 10;
+							if (j == 2)
+							{
+								SNewProcentInt = '.' + SNewProcentInt;
+							}
+							j++;
+						}
+						if (SNewProcentInt == "")
+							SNewProcentInt = "0";
+						encryption(file2, SNewProcentInt);
+						file2 << '\n';
+						j = 0;
+						while (Time)
+						{
+							char c = Time % 10 + 48;
+							STime = c + STime;
+							Time /= 10;
+							if (j == 2)
+							{
+								STime = '.' + STime;
+							}
+							j++;
+						}
+						if (STime == "")
+							STime = "0";
+						encryption(file2, STime);
+						file2 << '\n';
+					}
+					else
+					{
+						encryption(file2, s);
+						file2 << '\n';
+						encryption(file2, s1);
+						file2 << '\n';
+						encryption(file2, s2);
+						file2 << '\n';
+						encryption(file2, s3);
+						file2 << '\n';
+					}
+				}
+				else
+				{
+					encryption(file2, s);
+					file2 << '\n';
+				}
+				i++;
+			}
+			file.close();
+			file2.close();
+			file.open("Statistic.txt", std::ios::out);
+			file2.open("ExtraStatistic.txt", std::ios::in);
+			while (decryption(file2, s))
+			{
+				encryption(file, s);
+				file << '\n';
+			}
+			file.close();
+			file2.close();
+		}
+		else
+		{
+			file.open("Statistic.txt", std::ios::app);
+			encryption(file, name);
+			file << '\n';
+			std::string Smark, Smaxmark, SNewProcentInt, STime;
+			while (mark)
+			{
+				char c = mark % 10 + 48;
+				Smark = c + Smark;
+				mark /= 10;
+			}
+			while (maxmark)
+			{
+				char c = maxmark % 10 + 48;
+				Smaxmark = c + Smaxmark;
+				maxmark /= 10;
+			}
+			if (Smark == "")
+				Smark = "0";
+			std::string buf = Smark + "|" + Smaxmark;
+			encryption(file, buf);
+			file << '\n';
+			int NewProcentInt = NewProcent * 1000, Time = ((end - start) / (CLOCKS_PER_SEC * 1.)) * 1000;
+			int j = 0;
+			while (NewProcentInt)
+			{
+				char c = NewProcentInt % 10 + 48;
+				SNewProcentInt = c + SNewProcentInt;
+				NewProcentInt /= 10;
+				if (j == 2)
+				{
+					SNewProcentInt = '.' + SNewProcentInt;
+				}
+				j++;
+			}
+			if (SNewProcentInt == "")
+				SNewProcentInt = "0";
+			encryption(file, SNewProcentInt);
+			file << '\n';
+			j = 0;
+			while (Time)
+			{
+				char c = Time % 10 + 48;
+				STime = c + STime;
+				Time /= 10;
+				if (j == 2)
+				{
+					STime = '.' + STime;
+				}
+				j++;
+			}
+			if (STime == "")
+				STime = "0";
+			encryption(file, STime);
+			file << '\n';
+			file.close();
+		}
+		std::cout << "\nПосмотреть Ваш наилучший результат выполнения теста?\n1. Да\n2. Нет\n\nПункт: ";
+		std::string var;
+		bool again;
+		do
+		{
+			again = false;
+			getline(std::cin, var);
+			if (var != "1" && var != "2")
+			{
+				std::cout << "\nНекорректный ввод, введите снова: ";
+				again = true;
+			}
+		} while (again);
+		if (var == "1")
+			CheckResault(name);
+	}
+	else
+		std::cout << "Тест не содержит вопросов\n";
+}
+double Convert(std::string s)
+{
+	double a = 0;
+	int pos = s.find('.');
+	if (pos > 0)
+	{
+		for (int i = 0; i < s.length(); i++)
+		{
+			if (s[i] != '.')
+				a += (s[i] - 48) * powl(10, --pos);
+		}
+	}
+	else
+	{
+		int l = s.length();
+		for (int i = 0; i < s.length(); i++)
+		{
+			a += (s[i] - 48) * powl(10, --l);
+		}
+	}
+	return a;
+}
+void CheckResault(std::string name)
+{
+	std::fstream file;
+	std::string s, mark1, mark2;
+	file.open("Statistic.txt", std::ios::in);
+	while (decryption(file, s))
+	{
+		if (s == name)
+		{
+			std::cout << "\nИмя пользователя: " << name << '\n';
+			decryption(file, s);
+			int pos = s.find('|');
+			for (int i = 0; i < pos; i++)
+			{
+				mark1 += s[i];
+			}
+			for (int i = pos + 1; i < s.length(); i++)
+			{
+				mark2 += s[i];
+			}
+			std::cout << "Количество верных ответов(в баллах): " << mark1 << " из " << mark2 << '\n';
+			decryption(file, s);
+			std::cout << "Процент правильно выполненных заданий: " << s << "%\n";
+			decryption(file, s);
+			std::cout << "Время выполнения теста: " << s << " секунд\n\n";
+			break;
+		}
+	}
+	file.close();
+}
+
+//функции проверок на ввод
+int Enter()
+{
+	std::string a;
+	long long ans = 0, count;
+	bool n = true;
+	while (n)
+	{
+		getline(std::cin, a);
+		count = a.size();
+		for (int i = 0; i < count; i++)
+		{
+			if ((count == 1 && ((a[0] == '+') || (a[0] == '-'))) || (i > 0 && a[i] < '0' || a[i] > '9'))
+			{
+				std::cout << "Некорректный ввод, введите снова: ";
+				break;
+			}
+			if (i == count - 1)
+				n = false;
+		}
+	}
+	count--;
+	if (a[0] == '+')
+	{
+		int step = 1;
+		while (count >= 1)
+		{
+			ans += (a[count] - 48) * step;
+			count--;
+			step *= 10;
+		}
+		return ans;
+	}
+	else if (a[0] == '-')
+	{
+		int step = 1;
+		while (count >= 1)
+		{
+			ans += (a[count] - 48) * step;
+			count--;
+			step *= 10;
+		}
+		return -ans;
+	}
+	else
+	{
+		int step = 1;
+		while (count >= 0)
+		{
+			ans += (a[count] - 48) * step;
+			count--;
+			step *= 10;
+		}
+		return ans;
+	}
+}
+std::string EnterOneAnswer(int n)
+{
+	std::string s;
+	int a;
+	do
+	{
+		a = Enter();
+		if (a <= 0 || a > n)
+		{
+			std::cout << "\nНекорректный ввод, введите снова: ";
+		}
+
+	} while (a <= 0 || a > n);
+	while (a)
+	{
+		char c = (a % 10) + 48;
+		s = c + s;
+		a /= 10;
+	}
+	return s;
+}
+std::string EnterPoliAnswer(int n)
+{
+	bool again, kost = true;
+	int a;
+	std::string s;
+	bool* mas = new bool[n];
+	do
+	{
+		a = 0;
+		for (int i = 0; i < n; i++)
+		{
+			mas[i] = true;
+		}
+		again = false;
+		getline(std::cin, s);
+		for (int i = 0; i < s.length(); i++)
+		{
+			if (s[i] >= '0' && s[i] <= '9')
+				a = (a * 10) + (s[i] - 48);
+			if ((s[i] < '0' || s[i] > '9') && s[i] != ' ')
+			{
+				std::cout << "\nНекорректный ввод, введите снова: ";
+				again = true;
+				kost = false;
+				s.clear();
+				break;
+			}
+			if ((s[i] == ' ' || i == s.length() - 1))
+			{
+				if (a < n)
+				{
+					if (mas[a])
+						mas[a] = false;
+					else
+					{
+						std::cout << "\nНекорректный ввод, введите снова: ";
+						again = true;
+						kost = false;
+						s.clear();
+						break;
+					}
+					a = 0;
+					continue;
+				}
+				else
+				{
+					std::cout << "\nНекорректный ввод, введите снова: ";
+					again = true;
+					kost = false;
+					s.clear();
+					break;
+				}
+			}
+		}
+		int count = 0;
+		for (int i = 1; i < n; i++)
+		{
+			if (!mas[i])
+				count++;
+		}
+		if (count < 2 && kost)
+		{
+			std::cout << "\nНекорректный ввод, введите снова: ";
+			again = true;
+			s.clear();
+			
+		}
+		kost = true;
+	} while (again);
+	delete[] mas;
+	return s;
+}
+std::string PoliAnswer(int n)
+{
+	bool again, kost = true;
+	int a;
+	std::string s;
+	bool* mas = new bool[n];
+	do
+	{
+		a = 0;
+		for (int i = 0; i < n; i++)
+		{
+			mas[i] = true;
+		}
+		again = false;
+		getline(std::cin, s);
+		if (s == "")
+		{
+			again = true;
+		}
+		for (int i = 0; i < s.length(); i++)
+		{
+			if (s[i] >= '0' && s[i] <= '9')
+				a = (a * 10) + (s[i] - 48);
+			if ((s[i] < '0' || s[i] > '9') && s[i] != ' ')
+			{
+				std::cout << "\nНекорректный ввод, введите снова: ";
+				again = true;
+				kost = false;
+				s.clear();
+				break;
+			}
+			if ((s[i] == ' ' || i == s.length() - 1))
+			{
+				if (a < n)
+				{
+					if (mas[a])
+						mas[a] = false;
+					else
+					{
+						std::cout << "\nНекорректный ввод, введите снова: ";
+						again = true;
+						kost = false;
+						s.clear();
+						break;
+					}
+					a = 0;
+					continue;
+				}
+				else
+				{
+					std::cout << "\nНекорректный ввод, введите снова: ";
+					again = true;
+					kost = false;
+					s.clear();
+					break;
+				}
+			}
+		}
+	} while (again);
+	delete[] mas;
+	for (int i = 0; i < s.length(); i++)
+	{
+		if (s[i] == ' ')
+			s[i] = '|';
+	}
+	return s;
+}
